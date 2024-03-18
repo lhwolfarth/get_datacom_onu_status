@@ -1,6 +1,6 @@
 # get_datacom_onu_status
 Este script coleta informacões dos ONUs por SSH de forma otimizada em OLTs Datacom com firmware >= 9.4.0.
-Os comandos de coleta dos dados detalhados de cada ONU são executados no OLT apenas se houver alteração nos status dos ONUs (quantidade Up/Down) ou se o tempo desde a última coleta estiver expirado (default 600 s)
+Os comandos de coleta dos dados detalhados de cada ONU são executados no OLT apenas se houver alteração nos status dos ONUs (quantidade Up/Down) ou se o tempo desde a última coleta estiver expirado (default 1200 s)
 Os produtos suportados podem ser verificados no site https://datacom.com.br/pt/produtos/gpon
 
 Uso: ./get_datacom_onu_status.sh [-u usuário] [-p senha] [-h endereço IP] [-P porta SSH] [-t período máximo entre atualizações] [-s] [-d]
@@ -17,4 +17,5 @@ Opções:
 Exemplo de uso:
   ./get_datacom_onu_status.sh -u usuario -p senha -h 172.31.1.10 -P 2222 -t 600 -s -d
 
-
+Exemplo de uso (apenas parâmetros obrigatórios):
+ ./get_datacom_onu_status.sh -u usuario -p senha -h 172.31.1.10
