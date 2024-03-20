@@ -176,14 +176,21 @@ calculate_date() {
     # Extrair informações de dias, horas e minutos do "Last Seen Online" ou "Uptime"
     if [[ $1 == *"days"* ]]; then
         days=$(echo "$1" | grep -oE '[0-9]+ days' | awk '{print $1}')
-    else
+     else
         days=0
     fi
-    hours=$(echo "$1" | grep -oE '[0-9]+:[0-9]+' | awk -F: '{print $1}')
+    if [[ $1 == *":"* ]]; then
+        hours=$(echo "$1" | grep -oE '[0-9]+:[0-9]+' | awk -F: '{print $1}')
+        hours=$(expr "$hours" + 0)
+     else
+        hours=0
+    fi
     if [[ $1 == *"min"* ]]; then
         minutes=$(echo "$1" | grep -oE '[0-9]+ min' | awk '{print $1}')
-    else
+        minutes=$(expr "$minutes" + 0)
+     else
         minutes=$(echo "$1" | grep -o ':[0-9]\{2\}' | sed 's#:##g')
+        minutes=$(expr "$minutes" + 0)
     fi
 
     # Converter dias, horas e minutos para minutos totais
@@ -217,7 +224,7 @@ show_onu_data() {
    if [ $DEBUG -eq 1 ]; then
       #Imprime o cabeçalho por interface PON caso o modo debug habilitado
       if [ $TABLE -eq 1 ]; then
-         echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)" | awk 'BEGIN { FS=";" } { printf "%-14s %-12s %-12s %-12s %-26s %-20s %-20s %-25s %-15s %-15s %-15s %-15s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 }';
+         echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)" | awk 'BEGIN { FS=";" } { printf "%-16s %-12s %-12s %-12s %-26s %-20s %-20s %-25s %-15s %-15s %-15s %-15s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 }';
        else
          echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)"
       fi
@@ -244,7 +251,7 @@ show_onu_data() {
         if [[ $TX_OPTICAL_PW = "0.00" ]]; then TX_POWER_ONU="NULL"; else TX_POWER_ONU=$TX_OPTICAL_PW;fi
         if [[ $RSSI_VALUE =~ "Unable" ]]; then RX_POWER_OLT="NULL"; else RX_POWER_OLT=$RSSI_VALUE;fi
         if [ $TABLE -eq 1 ]; then
-           echo "$ONU_ID;$ADMIN_STATE;$OMCC_STATE;$PHASE_STATE;$DESCRIPTION;$LAST_REGISTER_TIME;$LAST_DEREGISTER_TIME;$LAST_DEREGISTER_REASON;$ALIVE_TIME;$RX_POWER_ONU;$TX_POWER_ONU;$RX_POWER_OLT" | awk 'BEGIN { FS=";" } { printf "%-14s %-12s %-12s %-12s %-26s %-20s %-20s %-25s %-15s %-15s %-15s %-15s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 }'
+           echo "$ONU_ID;$ADMIN_STATE;$OMCC_STATE;$PHASE_STATE;$DESCRIPTION;$LAST_REGISTER_TIME;$LAST_DEREGISTER_TIME;$LAST_DEREGISTER_REASON;$ALIVE_TIME;$RX_POWER_ONU;$TX_POWER_ONU;$RX_POWER_OLT" | awk 'BEGIN { FS=";" } { printf "%-16s %-12s %-12s %-12s %-26s %-20s %-20s %-25s %-15s %-15s %-15s %-15s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 }'
          else
            echo "$ONU_ID;$ADMIN_STATE;$OMCC_STATE;$PHASE_STATE;$DESCRIPTION;$LAST_REGISTER_TIME;$LAST_DEREGISTER_TIME;$LAST_DEREGISTER_REASON;$ALIVE_TIME;$RX_POWER_ONU;$TX_POWER_ONU;$RX_POWER_OLT"
         fi
@@ -284,7 +291,7 @@ pon_count=$(cat "$data_file_current" | wc -l)
 # Loop para verificar as interfaces que tiveram alteracao de status e atualizar o arquivo de dados por porta PON
 if [ $HEADER -eq 1 ]; then
    if [ $TABLE -eq 1 ]; then
-      echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)" | awk 'BEGIN { FS=";" } { printf "%-14s %-12s %-12s %-12s %-26s %-20s %-20s %-25s %-15s %-15s %-15s %-15s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 }';
+      echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)" | awk 'BEGIN { FS=";" } { printf "%-16s %-12s %-12s %-12s %-26s %-20s %-20s %-25s %-15s %-15s %-15s %-15s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 }';
     else
       echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)";
    fi
@@ -312,7 +319,7 @@ while [ $i -le $pon_count ]; do
            fi
         fi
         get_complete_port_data "$slot_port" "$data_dir/${slot_port_dash//\//-}.csv"
-        cmd="sed -i 's#^#${slot_port_dash}:#' $data_dir/${slot_port_dash//\//-}.csv; sed -i 's#,#;#g' $data_dir/${slot_port_dash//\//-}.csv; sed -i 's#days;#days,#g' $data_dir/${slot_port_dash//\//-}.csv"; eval $cmd
+        cmd="sed -i 's#^#${slot_port_dash}:#' $data_dir/${slot_port_dash//\//-}.csv; sed -i 's#,#;#g' $data_dir/${slot_port_dash//\//-}.csv; sed -i 's#day;#day,#g' $data_dir/${slot_port_dash//\//-}.csv; sed -i 's#days;#days,#g' $data_dir/${slot_port_dash//\//-}.csv"; eval $cmd
         timestamp_new=$(date +%s)
         cmd="sed -i '${i}s#.*#${pon_onus_current};${timestamp_new}#' $data_file_old"; eval $cmd
         show_onu_data "$data_dir/${slot_port_dash//\//-}.csv" "$slot_port_dash"
