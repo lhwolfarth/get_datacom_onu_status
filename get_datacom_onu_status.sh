@@ -30,6 +30,7 @@ check_sshpass
 PORT=22
 MAX_REFRESH_PERIOD=1200
 HEADER=0
+TABLE=0
 DEBUG=0
 
 
@@ -40,7 +41,7 @@ function usage() {
   echo "Os comandos de coleta dos dados detalhados de cada ONU são executados no OLT apenas se houver alteração nos status dos ONUs (quantidade Up/Down) ou se o tempo desde a última coleta estiver expirado (default $MAX_REFRESH_PERIOD s)" 
   echo "Os produtos suportados podem ser verificados no site https://datacom.com.br/pt/produtos/gpon"
   echo ""
-  echo "Uso: $0 [-u usuário] [-p senha] [-h endereço IP] [-P porta SSH] [-t período máximo entre atualizações] [-s] [-d]"
+  echo "Uso: $0 [-u usuário] [-p senha] [-h endereço IP] [-P porta SSH] [-t período máximo entre atualizações] [-s] [-m] [-d]"
   echo ""
   echo "Opções:"
   echo "  -u <usuário>     Nome do usuário para autenticação SSH (obrigatório)"
@@ -48,11 +49,12 @@ function usage() {
   echo "  -h <endereço IP> Endereço IP do OLT (obrigatório)"
   echo "  -P <porta SSH>   Porta SSH do servidor remoto (opcional, padrão: $PORT)"
   echo "  -t <período>     Período máximo entre atualizações dos dados das interfaces PON em segundos (opcional, padrão: $MAX_REFRESH_PERIOD s)"
-  echo "  -s               Mostra o cabeçalho da tabela .CSV (opcional)"
+  echo "  -s               Mostra o cabeçalho relativo aos campos das informacões (opcional)"
+  echo "  -m               Mostra os dados no formato de tabela (opcional)"
   echo "  -d               Habilita o modo debug (opcional)"
   echo ""
   echo "Exemplo de uso:"
-  echo "  $0 -u usuario -p senha -h 172.31.1.10 -P 2222 -t 600 -s -d"
+  echo "  $0 -u usuario -p senha -h 172.31.1.10 -P 2222 -t 600 -s -m -d"
   echo ""
   echo "Exemplo de uso (apenas parâmetros obrigatórios):"
   echo " $0 -u usuario -p senha -h 172.31.1.10"
@@ -61,7 +63,7 @@ function usage() {
 }
 
 # Parse das flags
-while getopts ":u:p:h:P:t:sd" opt; do
+while getopts ":u:p:h:P:t:smd" opt; do
   case $opt in
     u) USER=$OPTARG ;;
     p) PASS=$OPTARG ;;
@@ -69,6 +71,7 @@ while getopts ":u:p:h:P:t:sd" opt; do
     P) PORT=$OPTARG ;;
     t) MAX_REFRESH_PERIOD=$OPTARG ;;
     s) HEADER=1 ;;
+    m) TABLE=1 ;;
     d) DEBUG=1 ;;
     *) usage ;;
   esac
@@ -186,7 +189,7 @@ calculate_date() {
     # Converter dias, horas e minutos para minutos totais
     total_minutes=$((days * 24 * 60 + hours * 60 + minutes))
 
-    # Calcular a data offline baseada no tempo de atualização e no tempo offline total
+    # Calcular a data baseado no "Last Updated" menos o "Last Seen Online" ou "Uptime"
     DATE=$(date -d "$2 - $total_minutes minutes" +"%Y-%m-%d %H:%M:%S")
 }
 
@@ -212,8 +215,12 @@ show_onu_data() {
    onu_count=$(cat "$1" | wc -l)
    j=1;
    if [ $DEBUG -eq 1 ]; then
-      #Imprime o cabeçalho .CSV por interface PON caso o modo debug habilitado
-      echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)";
+      #Imprime o cabeçalho por interface PON caso o modo debug habilitado
+      if [ $TABLE -eq 1 ]; then
+         echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)" | awk 'BEGIN { FS=";" } { printf "%-14s %-12s %-12s %-12s %-26s %-20s %-20s %-25s %-15s %-15s %-15s %-15s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 }';
+       else
+         echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)"
+      fi
    fi
    while [ $j -le $onu_count ]; do
      if [[ $2 =~ "xgs" ]]; then
@@ -236,7 +243,11 @@ show_onu_data() {
         if [[ $RX_OPTICAL_PW = "0.00" ]]; then RX_POWER_ONU="NULL"; else RX_POWER_ONU=$RX_OPTICAL_PW;fi
         if [[ $TX_OPTICAL_PW = "0.00" ]]; then TX_POWER_ONU="NULL"; else TX_POWER_ONU=$TX_OPTICAL_PW;fi
         if [[ $RSSI_VALUE =~ "Unable" ]]; then RX_POWER_OLT="NULL"; else RX_POWER_OLT=$RSSI_VALUE;fi
-        echo "$ONU_ID;$ADMIN_STATE;$OMCC_STATE;$PHASE_STATE;$DESCRIPTION;$LAST_REGISTER_TIME;$LAST_DEREGISTER_TIME;$LAST_DEREGISTER_REASON;$ALIVE_TIME;$RX_POWER_ONU;$TX_POWER_ONU;$RX_POWER_OLT"
+        if [ $TABLE -eq 1 ]; then
+           echo "$ONU_ID;$ADMIN_STATE;$OMCC_STATE;$PHASE_STATE;$DESCRIPTION;$LAST_REGISTER_TIME;$LAST_DEREGISTER_TIME;$LAST_DEREGISTER_REASON;$ALIVE_TIME;$RX_POWER_ONU;$TX_POWER_ONU;$RX_POWER_OLT" | awk 'BEGIN { FS=";" } { printf "%-14s %-12s %-12s %-12s %-26s %-20s %-20s %-25s %-15s %-15s %-15s %-15s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 }'
+         else
+           echo "$ONU_ID;$ADMIN_STATE;$OMCC_STATE;$PHASE_STATE;$DESCRIPTION;$LAST_REGISTER_TIME;$LAST_DEREGISTER_TIME;$LAST_DEREGISTER_REASON;$ALIVE_TIME;$RX_POWER_ONU;$TX_POWER_ONU;$RX_POWER_OLT"
+        fi
       else
         echo "$ONU_ID"
      fi
@@ -271,7 +282,13 @@ fi
 pon_count=$(cat "$data_file_current" | wc -l)
 
 # Loop para verificar as interfaces que tiveram alteracao de status e atualizar o arquivo de dados por porta PON
-if [ $HEADER -eq 1 ]; then echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)"; fi
+if [ $HEADER -eq 1 ]; then
+   if [ $TABLE -eq 1 ]; then
+      echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)" | awk 'BEGIN { FS=";" } { printf "%-14s %-12s %-12s %-12s %-26s %-20s %-20s %-25s %-15s %-15s %-15s %-15s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 }';
+    else
+      echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)";
+   fi
+fi
 i=1
 while [ $i -le $pon_count ]; do
     pon_onus_old=$(sed "${i}q;d" "$data_file_old" | cut -d ';' -f 1-5 | tr -d '\n')
