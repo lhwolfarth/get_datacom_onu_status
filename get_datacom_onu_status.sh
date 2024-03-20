@@ -168,28 +168,26 @@ get_complete_port_data() {
     sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no -p "$PORT" "$USER"@"$IP" "show interface \\$1 onu | tab | csv | exclude ,,,,,,,,,, | exclude ID,VERSION" 2>/dev/null | sed '/^$/d' > "$2"
 }
 
-# Função para converter o LAST SEEN ONLINE em LAST REGISTER TIME
-calculate_offline_date() {
-    last_seen="$1"
-
-    # Extrair informações de dias, horas e minutos do "Last Seen Online"
-    if [[ $last_seen == *"days"* ]]; then
-        days=$(echo "$last_seen" | grep -oE '[0-9]+ days' | awk '{print $1}')
+# Função para calcular o REGISTER_TIME e o LAST_DEREGISTER_TIME
+calculate_date() {
+    # Extrair informações de dias, horas e minutos do "Last Seen Online" ou "Uptime"
+    if [[ $1 == *"days"* ]]; then
+        days=$(echo "$1" | grep -oE '[0-9]+ days' | awk '{print $1}')
     else
         days=0
     fi
-    hours=$(echo "$last_seen" | grep -oE '[0-9]+:[0-9]+' | awk -F: '{print $1}')
-    if [[ $last_seen == *"min"* ]]; then
-        minutes=$(echo "$last_seen" | grep -oE '[0-9]+ min' | awk '{print $1}')
+    hours=$(echo "$1" | grep -oE '[0-9]+:[0-9]+' | awk -F: '{print $1}')
+    if [[ $1 == *"min"* ]]; then
+        minutes=$(echo "$1" | grep -oE '[0-9]+ min' | awk '{print $1}')
     else
-        minutes=$(echo "$last_seen" | grep -o ':[0-9]\{2\}' | sed 's#:##g')
+        minutes=$(echo "$1" | grep -o ':[0-9]\{2\}' | sed 's#:##g')
     fi
 
     # Converter dias, horas e minutos para minutos totais
     total_minutes=$((days * 24 * 60 + hours * 60 + minutes))
 
     # Calcular a data offline baseada no tempo de atualização e no tempo offline total
-    LAST_REGISTER_TIME=$(date -d "$2 - $total_minutes minutes" +"%Y-%m-%d %H:%M:%S")
+    DATE=$(date -d "$2 - $total_minutes minutes" +"%Y-%m-%d %H:%M:%S")
 }
 
 # Função para descobrir a razão do ONU Down
@@ -231,13 +229,14 @@ show_onu_data() {
         if [[ $PRIMARY_STATUS =~ "Active" ]]; then OMCC_STATE="enable"; else OMCC_STATE="disable"; fi
         if [[ $OPER_STATE =~ "Up" ]]; then PHASE_STATE="working"; else PHASE_STATE="offline"; fi
         DESCRIPTION=$NAME
-        if [[ $LAST_SEEN_ONLINE =~ "N/A" ]]; then LAST_REGISTER_TIME="N/A"; else calculate_offline_date "$LAST_SEEN_ONLINE" "$LAST_UPDATED"; fi
+        if [[ $OPER_STATE =~ "Down" ]]; then LAST_REGISTER_TIME="N/A"; else calculate_date "$UPTIME" "$LAST_UPDATED"; LAST_REGISTER_TIME="$DATE"; fi
+        if [[ $LAST_SEEN_ONLINE =~ "N/A" ]]; then LAST_DEREGISTER_TIME="N/A"; else calculate_date "$LAST_SEEN_ONLINE" "$LAST_UPDATED"; LAST_DEREGISTER_TIME="$DATE"; fi
         if [[ $OPER_STATE =~ "Up" ]]; then LAST_DEREGISTER_REASON="N/A"; else check_offline_reason $ONU_ID; fi
         ALIVE_TIME=$(echo "$UPTIME" | sed 's#"##g' | sed 's#,##g')
         if [[ $RX_OPTICAL_PW = "0.00" ]]; then RX_POWER_ONU="NULL"; else RX_POWER_ONU=$RX_OPTICAL_PW;fi
         if [[ $TX_OPTICAL_PW = "0.00" ]]; then TX_POWER_ONU="NULL"; else TX_POWER_ONU=$TX_OPTICAL_PW;fi
         if [[ $RSSI_VALUE =~ "Unable" ]]; then RX_POWER_OLT="NULL"; else RX_POWER_OLT=$RSSI_VALUE;fi
-        echo "$ONU_ID;$ADMIN_STATE;$OMCC_STATE;$PHASE_STATE;$DESCRIPTION;$LAST_REGISTER_TIME;$LAST_DEREGISTER_REASON;$ALIVE_TIME;$RX_POWER_ONU;$TX_POWER_ONU;$RX_POWER_OLT"
+        echo "$ONU_ID;$ADMIN_STATE;$OMCC_STATE;$PHASE_STATE;$DESCRIPTION;$LAST_REGISTER_TIME;$LAST_DEREGISTER_TIME;$LAST_DEREGISTER_REASON;$ALIVE_TIME;$RX_POWER_ONU;$TX_POWER_ONU;$RX_POWER_OLT"
       else
         echo "$ONU_ID"
      fi
