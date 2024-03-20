@@ -213,24 +213,33 @@ show_onu_data() {
    #Faz o parse dos dados contidos no arquivo .csv da interface PON e imprime na tela
    onu_count=$(cat "$1" | wc -l)
    j=1;
-#   echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)";
+   if [ $DEBUG -eq 1 ]; then
+      #Imprime o cabeçalho .CSV por interface PON caso o modo debug habilitado
+      echo "ONU ID;Admin State;OMCC State;Phase State;Description;Last Register Time;Last Deregister Time;Last Deregister Reason;Alive Time;RX Power(ONU);TX Power(ONU);RX Power(OLT)";
+   fi
    while [ $j -le $onu_count ]; do
-     IFS=';' read -r ID VERSION OPTICAL_INFO RSSI RSSI_VALUE OPER_STATE PRIMARY_STATUS SERIAL_NUMBER_STATUS DHCP_STATUS_IPV4_CIDR DHCP_STATUS_DEFAULT_GATEWAY SOFTWARE_DOWNLOAD_STATE SOFTWARE_DOWNLOAD_PROGRESS VENDOR_ID EQ_ID VERSION_CODE ACTIVE_FW STANDBY_FW VALID_ACTIVE_FW COMM_ACTIVE_FW VALID_STANDBY_FW COMM_STANDBY_FW RX_OPTICAL_PW TX_OPTICAL_PW SUM_FIXED SUM_FIXED_ASSURED UPTIME LAST_UPDATED LAST_SEEN_ONLINE RG_PROFILE DISTANCE SERIAL_NUMBER NAME ETHERNET LINK NEGOTIATED_SPEED NEGOTIATED_DUPLEX GEM GEM_PORT_ID OPERATIONAL_STATUS_ETH ALLOC_ID TCONT ENCRYPTION_STATUS <<< $(sed -n "${j}p" "$1" | awk -F ';' '{print $1 ";" $2 ";" $3 ";" $4 ";" $5 ";" $6 ";" $7 ";" $8 ";" $9 ";" $10 ";" $11 ";" $12 ";" $13 ";" $14 ";" $15 ";" $16 ";" $17 ";" $18 ";" $19 ";" $20 ";" $21 ";" $22 ";" $23 ";" $24 ";" $25 ";" $26 ";" $27 ";" $28 ";" $29 ";" $30 ";" $31 ";" $32 ";" $33 ";" $34 ";" $35 ";" $36 ";" $37 ";" $38 ";" $39 ";" $40 ";" $41 ";" $42}')
+     if [[ $2 =~ "xgs" ]]; then
+        #Leitura dos campos quando o OLT é XGSPON
+        IFS=';' read -r ID VERSION OPTICAL_INFO RSSI_VALUE OPER_STATE PRIMARY_STATUS SERIAL_NUMBER_STATUS DHCP_STATUS_IPV4_CIDR DHCP_STATUS_DEFAULT_GATEWAY SOFTWARE_DOWNLOAD_STATE SOFTWARE_DOWNLOAD_PROGRESS VENDOR_ID EQ_ID VERSION_CODE ACTIVE_FW STANDBY_FW VALID_ACTIVE_FW COMM_ACTIVE_FW VALID_STANDBY_FW COMM_STANDBY_FW RX_OPTICAL_PW TX_OPTICAL_PW SUM_FIXED SUM_FIXED_ASSURED UPTIME LAST_UPDATED LAST_SEEN_ONLINE RG_PROFILE DISTANCE SERIAL_NUMBER NAME ETHERNET LINK NEGOTIATED_SPEED NEGOTIATED_DUPLEX GEM GEM_PORT_ID OPERATIONAL_STATUS_ETH ALLOC_ID TCONT ENCRYPTION_STATUS <<< $(sed -n "${j}p" "$1" | awk -F ';' '{print $1 ";" $2 ";" $3 ";" $4 ";" $5 ";" $6 ";" $7 ";" $8 ";" $9 ";" $10 ";" $11 ";" $12 ";" $13 ";" $14 ";" $15 ";" $16 ";" $17 ";" $18 ";" $19 ";" $20 ";" $21 ";" $22 ";" $23 ";" $24 ";" $25 ";" $26 ";" $27 ";" $28 ";" $29 ";" $30 ";" $31 ";" $32 ";" $33 ";" $34 ";" $35 ";" $36 ";" $37 ";" $38 ";" $39 ";" $40 ";" $41}')
+      else
+        #Leitura dos campos quando o OLT é GPON
+        IFS=';' read -r ID VERSION OPTICAL_INFO RSSI RSSI_VALUE OPER_STATE PRIMARY_STATUS SERIAL_NUMBER_STATUS DHCP_STATUS_IPV4_CIDR DHCP_STATUS_DEFAULT_GATEWAY SOFTWARE_DOWNLOAD_STATE SOFTWARE_DOWNLOAD_PROGRESS VENDOR_ID EQ_ID VERSION_CODE ACTIVE_FW STANDBY_FW VALID_ACTIVE_FW COMM_ACTIVE_FW VALID_STANDBY_FW COMM_STANDBY_FW RX_OPTICAL_PW TX_OPTICAL_PW SUM_FIXED SUM_FIXED_ASSURED UPTIME LAST_UPDATED LAST_SEEN_ONLINE RG_PROFILE DISTANCE SERIAL_NUMBER NAME ETHERNET LINK NEGOTIATED_SPEED NEGOTIATED_DUPLEX GEM GEM_PORT_ID OPERATIONAL_STATUS_ETH ALLOC_ID TCONT ENCRYPTION_STATUS <<< $(sed -n "${j}p" "$1" | awk -F ';' '{print $1 ";" $2 ";" $3 ";" $4 ";" $5 ";" $6 ";" $7 ";" $8 ";" $9 ";" $10 ";" $11 ";" $12 ";" $13 ";" $14 ";" $15 ";" $16 ";" $17 ";" $18 ";" $19 ";" $20 ";" $21 ";" $22 ";" $23 ";" $24 ";" $25 ";" $26 ";" $27 ";" $28 ";" $29 ";" $30 ";" $31 ";" $32 ";" $33 ";" $34 ";" $35 ";" $36 ";" $37 ";" $38 ";" $39 ";" $40 ";" $41 ";" $42}')
+     fi
      ONU_ID=$ID
      if [[ ! $ONU_ID =~ "entries" ]]; then
-      if [[ $PRIMARY_STATUS =~ "Unknown" ]]; then ADMIN_STATE="disable"; else ADMIN_STATE="enable"; fi
-      if [[ $PRIMARY_STATUS =~ "Active" ]]; then OMCC_STATE="enable"; else OMCC_STATE="disable"; fi
-      if [[ $OPER_STATE =~ "Up" ]]; then PHASE_STATE="working"; else PHASE_STATE="offline"; fi
-      DESCRIPTION=$NAME
-      if [[ $LAST_SEEN_ONLINE =~ "N/A" ]]; then LAST_REGISTER_TIME="N/A"; else calculate_offline_date "$LAST_SEEN_ONLINE" "$LAST_UPDATED"; fi
-      if [[ $OPER_STATE =~ "Up" ]]; then LAST_DEREGISTER_REASON="N/A"; else check_offline_reason $ONU_ID; fi
-      ALIVE_TIME=$(echo "$UPTIME" | sed 's#"##g' | sed 's#,##g')
-      if [[ $RX_OPTICAL_PW = "0.00" ]]; then RX_POWER_ONU="NULL"; else RX_POWER_ONU=$RX_OPTICAL_PW;fi
-      if [[ $TX_OPTICAL_PW = "0.00" ]]; then TX_POWER_ONU="NULL"; else TX_POWER_ONU=$TX_OPTICAL_PW;fi
-      if [[ $RSSI_VALUE =~ "Unable" ]]; then RX_POWER_OLT="NULL"; else RX_POWER_OLT=$RSSI_VALUE;fi
-      echo "$ONU_ID;$ADMIN_STATE;$OMCC_STATE;$PHASE_STATE;$DESCRIPTION;$LAST_REGISTER_TIME;$LAST_DEREGISTER_REASON;$ALIVE_TIME;$RX_POWER_ONU;$TX_POWER_ONU;$RX_POWER_OLT"
-     else
-     echo "$ONU_ID" 
+        if [[ $PRIMARY_STATUS =~ "Unknown" ]]; then ADMIN_STATE="disable"; else ADMIN_STATE="enable"; fi
+        if [[ $PRIMARY_STATUS =~ "Active" ]]; then OMCC_STATE="enable"; else OMCC_STATE="disable"; fi
+        if [[ $OPER_STATE =~ "Up" ]]; then PHASE_STATE="working"; else PHASE_STATE="offline"; fi
+        DESCRIPTION=$NAME
+        if [[ $LAST_SEEN_ONLINE =~ "N/A" ]]; then LAST_REGISTER_TIME="N/A"; else calculate_offline_date "$LAST_SEEN_ONLINE" "$LAST_UPDATED"; fi
+        if [[ $OPER_STATE =~ "Up" ]]; then LAST_DEREGISTER_REASON="N/A"; else check_offline_reason $ONU_ID; fi
+        ALIVE_TIME=$(echo "$UPTIME" | sed 's#"##g' | sed 's#,##g')
+        if [[ $RX_OPTICAL_PW = "0.00" ]]; then RX_POWER_ONU="NULL"; else RX_POWER_ONU=$RX_OPTICAL_PW;fi
+        if [[ $TX_OPTICAL_PW = "0.00" ]]; then TX_POWER_ONU="NULL"; else TX_POWER_ONU=$TX_OPTICAL_PW;fi
+        if [[ $RSSI_VALUE =~ "Unable" ]]; then RX_POWER_OLT="NULL"; else RX_POWER_OLT=$RSSI_VALUE;fi
+        echo "$ONU_ID;$ADMIN_STATE;$OMCC_STATE;$PHASE_STATE;$DESCRIPTION;$LAST_REGISTER_TIME;$LAST_DEREGISTER_REASON;$ALIVE_TIME;$RX_POWER_ONU;$TX_POWER_ONU;$RX_POWER_OLT"
+      else
+        echo "$ONU_ID"
      fi
     ((j++))
    done
@@ -240,6 +249,7 @@ show_onu_data() {
 if [ $DEBUG -eq 1 ]; then
  check_ssh_connectivity
  check_firmware_version
+ echo ""
 fi
 
 # Verifica se o diretório de dados existe, se não, cria um novo
@@ -289,13 +299,15 @@ while [ $i -le $pon_count ]; do
         cmd="sed -i 's#^#${slot_port_dash}:#' $data_dir/${slot_port_dash//\//-}.csv; sed -i 's#,#;#g' $data_dir/${slot_port_dash//\//-}.csv; sed -i 's#days;#days,#g' $data_dir/${slot_port_dash//\//-}.csv"; eval $cmd
         timestamp_new=$(date +%s)
         cmd="sed -i '${i}s#.*#${pon_onus_current};${timestamp_new}#' $data_file_old"; eval $cmd
-        show_onu_data "$data_dir/${slot_port_dash//\//-}.csv"
+        show_onu_data "$data_dir/${slot_port_dash//\//-}.csv" "$slot_port_dash"
+        if [ $DEBUG -eq 1 ]; then echo ""; fi
     else
         if [ $DEBUG -eq 1 ]; then
            echo "$(date "+%Y-%m-%d %T") - ${slot_port_dash}: os ONUs não mudaram o status desde a última consulta. Atual: $pon_onus_current. Anterior: $pon_onus_old";
            echo "$(date "+%Y-%m-%d %T") - ${slot_port_dash}: o periodo maximo entre consultas ainda não expirou ($timestamp_diff s de $MAX_REFRESH_PERIOD s)";
         fi
-     show_onu_data "$data_dir/${slot_port_dash//\//-}.csv"
+     show_onu_data "$data_dir/${slot_port_dash//\//-}.csv" "$slot_port_dash"
+     if [ $DEBUG -eq 1 ]; then echo ""; fi
     fi
     ((i++))
 done
