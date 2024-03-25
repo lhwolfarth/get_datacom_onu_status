@@ -246,7 +246,7 @@ show_onu_data() {
         if [[ $OPER_STATE =~ "Down" ]]; then LAST_REGISTER_TIME="N/A"; else calculate_date "$UPTIME" "$LAST_UPDATED"; LAST_REGISTER_TIME="$DATE"; fi
         if [[ $LAST_SEEN_ONLINE =~ "N/A" ]]; then LAST_DEREGISTER_TIME="N/A"; else calculate_date "$LAST_SEEN_ONLINE" "$LAST_UPDATED"; LAST_DEREGISTER_TIME="$DATE"; fi
         if [[ $OPER_STATE =~ "Up" ]]; then LAST_DEREGISTER_REASON="N/A"; else check_offline_reason $ONU_ID; fi
-        ALIVE_TIME=$(echo "$UPTIME" | sed 's#"##g' | sed 's#,##g')
+        if [[ $OPER_STATE =~ "Up" ]]; then ALIVE_TIME=$(echo "$UPTIME" | sed 's#"##g' | sed 's#,##g'); else ALIVE_TIME="N/A"; fi
         if [[ $RX_OPTICAL_PW = "0.00" ]]; then RX_POWER_ONU="NULL"; else RX_POWER_ONU=$RX_OPTICAL_PW;fi
         if [[ $TX_OPTICAL_PW = "0.00" ]]; then TX_POWER_ONU="NULL"; else TX_POWER_ONU=$TX_OPTICAL_PW;fi
         if [[ $RSSI_VALUE =~ "Unable" ]]; then RX_POWER_OLT="NULL"; else RX_POWER_OLT=$RSSI_VALUE;fi
