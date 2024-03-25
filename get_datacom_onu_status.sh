@@ -304,8 +304,9 @@ while [ $i -le $pon_count ]; do
     timestamp_current=$(sed "${i}q;d" "$data_file_current" | cut -d ';' -f 6 | tr -d '\r')
     timestamp_old=$(sed "${i}q;d" "$data_file_old" | cut -d ';' -f 6 | tr -d '\r')
     timestamp_diff=$(($timestamp_current - $timestamp_old))
+    if [[ "$pon_onus_current" =~ "0;0;0;0" ]] && [[ "$pon_onus_old" =~ "0;0;0;0" ]]; then PON_DISABLED="true"; else PON_DISABLED="false"; fi
     IFS=';' read -r slot_port_dash total non_provisioned up down timestamp <<< "$pon_onus_current_timestamp"
-    if [[ "$pon_onus_current" != "$pon_onus_old" ]] || [[ "$timestamp_diff" -ge "$MAX_REFRESH_PERIOD" ]] || [[ ! -f "$data_dir/${slot_port_dash//\//-}.csv" ]]; then
+    if [[ "$pon_onus_current" != "$pon_onus_old" ]] || [[ "$timestamp_diff" -ge "$MAX_REFRESH_PERIOD" ]]  && [[ "$PON_DISABLED" =~ "false" ]] || [[ ! -f "$data_dir/${slot_port_dash//\//-}.csv" ]]; then
         slot_port=$(echo $slot_port_dash | sed 's#-# #')
         if [ $DEBUG -eq 1 ]; then
            if [[ "$pon_onus_current" != "$pon_onus_old" ]]; then
