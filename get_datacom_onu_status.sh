@@ -237,7 +237,7 @@ show_onu_data() {
         #Leitura dos campos quando o OLT é GPON
         IFS=';' read -r ID VERSION OPTICAL_INFO RSSI RSSI_VALUE OPER_STATE PRIMARY_STATUS SERIAL_NUMBER_STATUS DHCP_STATUS_IPV4_CIDR DHCP_STATUS_DEFAULT_GATEWAY SOFTWARE_DOWNLOAD_STATE SOFTWARE_DOWNLOAD_PROGRESS VENDOR_ID EQ_ID VERSION_CODE ACTIVE_FW STANDBY_FW VALID_ACTIVE_FW COMM_ACTIVE_FW VALID_STANDBY_FW COMM_STANDBY_FW RX_OPTICAL_PW TX_OPTICAL_PW SUM_FIXED SUM_FIXED_ASSURED UPTIME LAST_UPDATED LAST_SEEN_ONLINE RG_PROFILE DISTANCE SERIAL_NUMBER NAME ETHERNET LINK NEGOTIATED_SPEED NEGOTIATED_DUPLEX GEM GEM_PORT_ID OPERATIONAL_STATUS_ETH ALLOC_ID TCONT ENCRYPTION_STATUS <<< $(sed -n "${j}p" "$1" | awk -F ';' '{print $1 ";" $2 ";" $3 ";" $4 ";" $5 ";" $6 ";" $7 ";" $8 ";" $9 ";" $10 ";" $11 ";" $12 ";" $13 ";" $14 ";" $15 ";" $16 ";" $17 ";" $18 ";" $19 ";" $20 ";" $21 ";" $22 ";" $23 ";" $24 ";" $25 ";" $26 ";" $27 ";" $28 ";" $29 ";" $30 ";" $31 ";" $32 ";" $33 ";" $34 ";" $35 ";" $36 ";" $37 ";" $38 ";" $39 ";" $40 ";" $41 ";" $42}')
      fi
-     ONU_ID=$ID
+     ONU_ID=$(echo "$ID" | sed 's#%##g')
      if [[ ! $ONU_ID =~ "entries" ]]; then
         if [[ $PRIMARY_STATUS =~ "Unknown" ]]; then ADMIN_STATE="disable"; else ADMIN_STATE="enable"; fi
         if [[ $PRIMARY_STATUS =~ "Active" ]]; then OMCC_STATE="enable"; else OMCC_STATE="disable"; fi
