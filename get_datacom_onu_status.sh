@@ -144,12 +144,16 @@ check_ssh_connectivity() {
 check_firmware_version() {
     # Comando SSH para obter o firmware do equipamento
     firmware=$(sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no -p "$PORT" "$USER"@"$IP" "show firmware | include Active" 2>/dev/null | awk -F '-' '{print $1}')
-    # Verifica se o firmware é menor que 9.4.0
-    if [[ "$(echo $firmware)" < "9.4.0" ]]; then
-        echo "$(date "+%Y-%m-%d %T") - Erro! O firmware do equipamento deve ser maior ou igual a 9.4.0. A versão instalada é $firmware".
-        exit 1  # Interrompe o script se o firmware for menor que 9.4.0
+    
+    # Define a versão mínima suportada
+    min_version="9.4.0"
+
+    # Verifica se o firmware é menor que a versão mínima
+    if [[ "$(printf '%s\n' "$min_version" "$firmware" | sort -V | head -n1)" == "$firmware" && "$firmware" != "$min_version" ]]; then
+        echo "$(date "+%Y-%m-%d %T") - Erro! O firmware do equipamento deve ser maior ou igual a $min_version. A versão instalada é $firmware."
+        exit 1  # Interrompe o script se o firmware for menor que a versão mínima
     else
-       echo "$(date "+%Y-%m-%d %T") - O firmware do equipamento é $firmware, que é compatível com o script."
+        echo "$(date "+%Y-%m-%d %T") - O firmware do equipamento é $firmware, que é compatível com o script."
     fi
 }
 
