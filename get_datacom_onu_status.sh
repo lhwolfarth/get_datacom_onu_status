@@ -332,7 +332,9 @@ while [ $i -le $pon_count ]; do
     else
         if [ $DEBUG -eq 1 ]; then
            echo "$(date "+%Y-%m-%d %T") - ${slot_port_dash}: os ONUs não mudaram o status desde a última consulta. Atual: $pon_onus_current. Anterior: $pon_onus_old";
+           if [[ "$timestamp_diff" -lt "$MAX_REFRESH_PERIOD" ]]; then
            echo "$(date "+%Y-%m-%d %T") - ${slot_port_dash}: o periodo maximo entre consultas ainda não expirou ($timestamp_diff s de $MAX_REFRESH_PERIOD s)";
+           fi
         fi
      show_onu_data "$data_dir/${slot_port_dash//\//-}.csv" "$slot_port_dash"
      if [ $DEBUG -eq 1 ]; then echo ""; fi
