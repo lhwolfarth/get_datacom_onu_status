@@ -206,7 +206,7 @@ calculate_date() {
 
 # Função para descobrir a razão do ONU Down
 check_offline_reason() {
-  onu_id_alarm=$(echo $1 | sed 's#:#/#g')
+  onu_id_alarm=$(echo $1 | sed 's#:#/#g' | sed 's#.*pon-##g')
   dgi_alarm=$(cat "$data_file_alarms" | grep "$onu_id_alarm" | grep "DGi")
   losi_alarm=$(cat "$data_file_alarms" | grep "$onu_id_alarm" | grep "LOSi")
   if [[ "$losi_alarm" =~ "LOSi" ]] && [[ "$dgi_alarm" =~ "DGi" ]]; then
